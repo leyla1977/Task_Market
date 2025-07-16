@@ -59,22 +59,15 @@ public class Product {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true; // Сравнение ссылок
-        if (o == null || getClass() != o.getClass()) return false; // Null или другой класс
-
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         Product product = (Product) o;
-
-        return id == product.id &&
-                Double.compare(product.price, price) == 0 &&
-                quantity == product.quantity &&
-                productName.equals(product.productName) &&
-                manufacturer.equals(product.manufacturer) &&
-                rating == product.rating;
+        return id == product.id;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, productName, manufacturer, price, quantity, rating);
+        return Objects.hash(id);
     }
 
 

@@ -1,9 +1,7 @@
 package ru.netology;
 
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class Basket {
     // Ключ — продукт, значение — количество в корзине
@@ -12,6 +10,10 @@ public class Basket {
     // Добавить товар в корзину (увеличить количество на 1)
     public void addProduct(Product product) {
         items.put(product, items.getOrDefault(product, 0) + 1);
+    }
+
+    public boolean isEmpty() {
+        return items.isEmpty();
     }
 
     // Удалить один товар из корзины (уменьшить количество на 1, если 0 — удалить)
@@ -53,7 +55,10 @@ public class Basket {
         }
         System.out.printf("💰 Общая сумма: %.2f руб.%n", getTotalAmount());
     }
-
+    // Очистить корзину
+    public void clear() {
+        items.clear();
+    }
 
 
     // Общая сумма товаров в корзине
@@ -64,5 +69,20 @@ public class Basket {
         }
         return total;
     }
+    // Передает список товара с учетом количества
+    public List<Product> getAllItemsAsList() {
+        List<Product> allItems = new ArrayList<>();
+        for (Map.Entry<Product, Integer> entry : items.entrySet()) {
+            Product product = entry.getKey();
+            int quantity = entry.getValue();
+            for (int i = 0; i < quantity; i++) {
+                allItems.add(product);
+            }
+        }
+        return allItems;
+    }
+
+
+
 }
 

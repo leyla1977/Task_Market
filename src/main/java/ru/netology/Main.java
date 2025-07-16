@@ -2,6 +2,10 @@ package ru.netology;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Map;
+
+import static ru.netology.BasketHelper.askToAddToBasket;
 
 public class Main {
     private static int nextOrderId = 1;
@@ -31,9 +35,13 @@ public class Main {
                 new Product(4, "Сыр", bl, 1000, 100, cheeseRating),
                 new Product(5, "Масло растительное", kmk, 150, 50, juiceRating)
         );
-
-        List<Product> userBasket = new ArrayList<>();
+        PurchaseHistory purchaseHistory = new PurchaseHistory();
+        Basket userBasket = new Basket();
         List<Order> orders = new ArrayList<>();
+        BasketBuilder basketBuilder = new BasketBuilder(purchaseHistory);
+
+
+
 
         while (true) {
             System.out.println("\n=== МЕНЮ ===");
@@ -45,6 +53,7 @@ public class Main {
             System.out.println("6. Трекинг заказа");
             System.out.println("7. Повторить заказ");
             System.out.println("8. Возврат заказа");
+            System.out.println("9. Рекомендуем на основе ваших покупок");
             System.out.println("0. Выход");
 
             System.out.print("Выберите действие: ");
@@ -65,10 +74,11 @@ public class Main {
                                         .findFirst()
                                         .ifPresentOrElse(
                                                 product -> {
-                                                    userBasket.add(product);
+                                                    userBasket.addProduct(product);  // Так нужно
                                                     System.out.println("✅ Товар \"" + product.getProductName() + "\" добавлен в корзину.");
                                                 },
                                                 () -> System.out.println("❌ Товар с ID " + id + " не найден.")
+
                                         );
                             } catch (NumberFormatException e) {
                                 System.out.println("⚠ Некорректный ID: " + idStr);
@@ -110,15 +120,9 @@ public class Main {
                                 .collect(Collectors.toList());
                     }
 
-                    if (matched.isEmpty()) {
-                        System.out.println("После фильтрации ничего не найдено.");
-                    } else {
-                        matched.forEach(System.out::println);
-                        askToAddToBasket(scanner, userBasket, matched);
-                    }
-                    break;
 
-                case "3":
+
+                case "3": {
                     System.out.print("Введите имя производителя: ");
                     String manufacturerName = scanner.nextLine().toLowerCase();
                     List<Product> byManufacturer = allProducts.stream()
@@ -132,6 +136,8 @@ public class Main {
                         askToAddToBasket(scanner, userBasket, byManufacturer);
                     }
                     break;
+                }
+
 
                 case "4":
                     if (userBasket.isEmpty()) {
@@ -140,7 +146,9 @@ public class Main {
                         System.out.println("🛒 Товары в корзине:");
 
                         // Группируем товары в корзине по продукту и считаем количество каждого
-                        Map<Product, Long> productCount = userBasket.stream()
+                        List<Product> allItemsInBasket = userBasket.getAllItemsAsList();
+
+                        Map<Product, Long> productCount = allItemsInBasket.stream()
                                 .collect(Collectors.groupingBy(p -> p, Collectors.counting()));
 
                         productCount.forEach((product, count) -> {
@@ -148,8 +156,10 @@ public class Main {
                                     + product.getPrice() + " (" + product.getManufacturer().toString() + ") Кол-во: " + count + " ед.");
                         });
 
-                        double total = userBasket.stream().mapToDouble(Product::getPrice).sum();
+
+                        double total = allItemsInBasket.stream().mapToDouble(Product::getPrice).sum();
                         System.out.println("💰 Общая сумма: " + total + " руб.");
+
 
                         while (true) {
                             System.out.println("\nВыберите действие:");
@@ -161,11 +171,22 @@ public class Main {
                             String subChoice = scanner.nextLine();
                             switch (subChoice) {
                                 case "1":
-                                    Order newOrder = new Order(userBasket);
+                                    Order newOrder = new Order(userBasket.getAllItemsAsList());
                                     orders.add(newOrder);
                                     System.out.println("📦 Заказ оформлен! Номер заказа: " + newOrder.getOrderId());
+
+                                    //  Добавим все товары из корзины в историю покупок
+                                    for (Product p : userBasket.getProducts()) {
+                                        int qty = userBasket.getQuantity(p);
+                                        for (int i = 0; i < qty; i++) {
+                                            purchaseHistory.addPurchase(p);
+                                        }
+                                    }
+
                                     userBasket.clear();
                                     break;
+
+
                                 case "2":
                                     System.out.println("📃 Доступные товары:");
                                     allProducts.forEach(p -> System.out.println("ID: " + p.getId() + " | " + p.getProductName()
@@ -178,7 +199,8 @@ public class Main {
                                                 .findFirst()
                                                 .ifPresentOrElse(
                                                         p -> {
-                                                            userBasket.add(p);
+                                                            userBasket.addProduct(p);
+
                                                             System.out.println("✅ Товар добавлен: " + p.getProductName());
                                                         },
                                                         () -> System.out.println("❌ Товар с таким ID не найден.")
@@ -188,8 +210,12 @@ public class Main {
                                     }
                                     break;
                                 case "3":
-                                    System.out.println("🧾 Товары в корзине:");
-                                    // Повторяем группировку для вывода
+                                    System.out.println("\uD83D\uDCDD Товары в корзине:");
+                                    List<Product> basketItems = userBasket.getAllItemsAsList();
+                                    Map<Product, Long> itemsCount = basketItems.stream()
+                                            .collect(Collectors.groupingBy(p -> p, Collectors.counting()));
+
+
                                     productCount.forEach((product, count) -> {
                                         System.out.println("ID: " + product.getId() + " | " + product.getProductName() + " - "
                                                 + product.getPrice() + " (" + product.getManufacturer().toString() + ") Кол-во: " + count + " ед.");
@@ -197,20 +223,20 @@ public class Main {
                                     System.out.print("Введите ID товара для удаления: ");
                                     try {
                                         int idToRemove = Integer.parseInt(scanner.nextLine());
-                                        // Удаляем только один экземпляр товара
-                                        Optional<Product> toRemove = userBasket.stream()
+                                        Optional<Product> productToRemove = productCount.keySet().stream()
                                                 .filter(p -> p.getId() == idToRemove)
                                                 .findFirst();
-                                        if (toRemove.isPresent()) {
-                                            userBasket.remove(toRemove.get());
-                                            System.out.println("🗑️ Удалено: " + toRemove.get().getProductName());
-                                        } else {
-                                            System.out.println("❌ Товар не найден в корзине.");
-                                        }
+
+                                        productToRemove.ifPresentOrElse(
+                                                product -> {
+                                                    userBasket.removeProduct(product);
+                                                    System.out.println("❎ Удалён один экземпляр товара: " + product.getProductName());
+                                                },
+                                                () -> System.out.println("❌ Товар с таким ID не найден в корзине.")
+                                        );
                                     } catch (NumberFormatException e) {
                                         System.out.println("⚠ Некорректный ввод.");
                                     }
-                                    break;
                                 case "0":
                                     break;
                                 default:
@@ -226,17 +252,50 @@ public class Main {
 
 
                 case "5":
-                    if (userBasket.isEmpty()) {
+                    if (userBasket.getProducts().isEmpty()) {
                         System.out.println("Корзина пуста. Добавьте товары.");
                     } else {
-                        Order order = new Order(userBasket); // ✅
+                        Order order = new Order(userBasket.getAllItemsAsList()); // ✅
 
                         orders.add(order);
+
+                        // Добавляем товары из корзины в историю покупок
+                        for (Product p : userBasket.getAllItemsAsList()) {
+                            purchaseHistory.addPurchase(p);
+                        }
+                        
                         userBasket.clear();
                         System.out.println("✅ Заказ оформлен: " + order);
                     }
                     break;
 
+                case "6":
+                    if (orders.isEmpty()) {
+                        System.out.println("Нет заказов для трекинга. Выберите другое действие.");
+                    } else {
+                        System.out.print("Введите номер заказа для трекинга: ");
+                        try {
+                            int orderId = Integer.parseInt(scanner.nextLine());
+
+                            orders.stream()
+                                    .filter(order -> order.getOrderId() == orderId)
+                                    .findFirst()
+                                    .ifPresentOrElse(order -> {
+                                        // Здесь можно вывести информацию о заказе, например:
+                                        System.out.println("Заказ найден:");
+                                        System.out.println("Номер заказа: " + order.getOrderId());
+                                        System.out.println("Дата заказа: " + order.getOrderDate());
+                                        System.out.println("Сумма: " + order.getTotalAmount() + " руб.");
+                                        // Можно вывести детали заказа:
+                                        order.getProducts().forEach(product ->
+                                                System.out.println("- " + product.getProductName() + " | Цена: " + product.getPrice())
+                                        );
+                                    }, () -> System.out.println("Заказ с номером " + orderId + " не найден."));
+                        } catch (NumberFormatException e) {
+                            System.out.println("Некорректный ввод номера заказа.");
+                        }
+                    }
+                    break;
 
 
                 case "7":
@@ -244,13 +303,25 @@ public class Main {
                         System.out.println("Нет заказов для повтора.");
                     } else {
                         System.out.print("Введите номер заказа для повтора: ");
-                        int id = Integer.parseInt(scanner.nextLine());
-                        orders.stream().filter(o -> o.getOrderId() == id).findFirst().ifPresentOrElse(order -> {
-                            userBasket.addAll(order.getProducts());
-                            System.out.println("Товары из заказа добавлены в корзину.");
-                        }, () -> System.out.println("Заказ не найден."));
+                        try {
+                            int id = Integer.parseInt(scanner.nextLine());
+
+                            orders.stream()
+                                    .filter(o -> o.getOrderId() == id)
+                                    .findFirst()
+                                    .ifPresentOrElse(order -> {
+                                        for (Product p : order.getProducts()) {
+                                            userBasket.addProduct(p); // добавляем каждый товар из заказа в корзину
+                                        }
+                                        System.out.println("Товары из заказа добавлены в корзину.");
+                                    }, () -> System.out.println("❌ Заказ не найден."));
+
+                        } catch (NumberFormatException e) {
+                            System.out.println("⚠ Некорректный номер заказа.");
+                        }
                     }
                     break;
+
 
                 case "8":
                     if (orders.isEmpty()) {
@@ -279,6 +350,16 @@ public class Main {
                         }
                     }
                     break;
+                case "9":
+                    List<Product> recommended = basketBuilder.buildBasket(3);
+                    if (recommended.isEmpty()) {
+                        System.out.println("Недостаточно данных для рекомендаций.");
+                    } else {
+                        System.out.println("🧠 Рекомендуем на основе ваших покупок:");
+                        recommended.forEach(p -> System.out.println(p));
+                    }
+                    break;
+
 
 
                 case "0":
@@ -291,15 +372,5 @@ public class Main {
         }
     }
 
-    private static void askToAddToBasket(Scanner scanner, List<Product> basket, List<Product> matched) {
-        System.out.print("Хотите добавить товар в корзину? Введите ID товара или 0 для отмены: ");
-        int id = Integer.parseInt(scanner.nextLine());
-        if (id == 0) return;
-        matched.stream().filter(p -> p.getId() == id).findFirst().ifPresentOrElse(
-                product -> {
-                    basket.add(product);
-                    System.out.println("✅ Товар добавлен в корзину.");
-                },
-                () -> System.out.println("❌ Товар не найден по ID."));
-    }
+
 }
