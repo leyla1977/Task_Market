@@ -95,7 +95,7 @@ PurchaseStatsProvider purchaseHistory = new PurchaseHistory();
 BasketBuilder basketBuilder = new BasketBuilder(purchaseHistory);
 
 **Принцип DRY (Don't Repeat Yourself)**
-**1. Метод askToAddToBasket в BasketHelper:**
+**1. Метод askToAddToBasket в BasketHelper -  [ссылка](https://github.com/leyla1977/Task_Market/blob/main/src/main/java/ru/netology/BasketHelper.java):**
 
 public static void askToAddToBasket(Scanner scanner, Basket userBasket, List<Product> products)
 Код добавления товара в корзину  — он выделен в отдельный метод, который можно переиспользовать после любого поиска (по ключевому слову или по производителю):
@@ -113,10 +113,17 @@ public static void askToAddToBasket(Scanner scanner, Basket userBasket, List<Pro
                       **  askToAddToBasket(scanner, userBasket, byManufacturer);**
                     }
                     break;
-                }. Это чистое применение DRY.
+                }. 
+                Это чистое применение DRY. Так мы  не дублируем код добавления в корзину, а просто передаем:
+
+-scanner — для работы с вводом;
+
+-userBasket — в которую добавлять;
+
+-byManufacturer — список, из которого выбирать.
 
 
-**2. Метод getAllItemsAsList в Basket:**
+**2. Метод getAllItemsAsList в Basket -  [ссылка](https://github.com/leyla1977/Task_Market/blob/main/src/main/java/ru/netology/Basket.java):**
 Возвращает список всех товаров в корзине с учетом количества каждого товара, то есть с "разворачиванием" дубликатов.
     public List<Product> getAllItemsAsList() {
         List<Product> allItems = new ArrayList<>();
@@ -150,3 +157,5 @@ public static void askToAddToBasket(Scanner scanner, Basket userBasket, List<Pro
                         for (Product p : userBasket.getAllItemsAsList()) {
                             purchaseHistory.addPurchase(p);
                         }
+
+
