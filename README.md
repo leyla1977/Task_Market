@@ -64,6 +64,38 @@ Order.java — хранение информации о заказе и его �
 Каждый класс зависит только от нужных ему методов.**
 
 Класс BasketBuilder [ссылка](https://github.com/leyla1977/Task_Market/blob/main/src/main/java/ru/netology/BasketBuilder.java)  работает с любым объектом, реализующим PurchaseStatsProvider [ссылка](https://github.com/leyla1977/Task_Market/blob/main/src/main/java/ru/netology/PurchaseStatsProvider.java), а не только с PurchaseHistory [ссылка](https://github.com/leyla1977/Task_Market/blob/main/src/main/java/ru/netology/PurchaseHistory.java). Это и есть гибкость, достигаемая за счёт разделения интерфейсов.
+Поясню. По логике ISP классы не должны зависеть от методов, которые они не используют. Интерфейсы должны быть маленькими и специфичными.
+Что у меня:
+1. Есть интерфейс :
+public interface PurchaseStatsProvider {
+    Map<Product, Integer> getPurchaseStats();
+}
+2. Я его применяю в PurchaseHistory:
+public class PurchaseHistory implements PurchaseStatsProvider {
+    ...
+}
+3.А также в BasketBuider:
+public class BasketBuilder {
+    private final PurchaseStatsProvider statsProvider;
+
+    public BasketBuilder(PurchaseStatsProvider statsProvider) {
+        this.statsProvider = statsProvider;
+    }
+
+    public List<Product> buildBasket(int topN) {
+        return statsProvider.getPurchaseStats().entrySet().stream()
+                .sorted((a, b) -> b.getValue() - a.getValue())
+                .limit(topN)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+}
+Таким образом ISP реализован, хоть и по минимуму:
+PurchaseStatsProvider — это маленький, узкоспециализированный интерфейс, содержащий только один метод.
+Класс BasketBuilder использует только то, что ему нужно: метод getPurchaseStats(), а не весь PurchaseHistory.
+Таким образом:
+1. Интерфейс PurchaseStatsProvider маленький и специфичный.
+2. BasketBuilder использует только нужные методы интерфейса, и интерфейс не "заставляет"  реализовать "лишние" методы.
 
 **D — Dependency Inversion Principle (Принцип инверсии зависимостей)**
 Согласно DIP pависимости должны быть от абстракций, а не от конкретных классов.
