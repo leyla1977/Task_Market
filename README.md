@@ -94,3 +94,59 @@ public class BasketBuilder {
 PurchaseStatsProvider purchaseHistory = new PurchaseHistory();
 BasketBuilder basketBuilder = new BasketBuilder(purchaseHistory);
 
+**Принцип DRY (Don't Repeat Yourself)**
+**1. Метод askToAddToBasket в BasketHelper:**
+
+public static void askToAddToBasket(Scanner scanner, Basket userBasket, List<Product> products)
+Код добавления товара в корзину  — он выделен в отдельный метод, который можно переиспользовать после любого поиска (по ключевому слову или по производителю):
+     case "3": {
+                    System.out.print("Введите имя производителя: ");
+                    String manufacturerName = scanner.nextLine().toLowerCase();
+                    List<Product> byManufacturer = allProducts.stream()
+                            .filter(p -> p.getManufacturer().getManufacturerName().toLowerCase().contains(manufacturerName))
+                            .collect(Collectors.toList());
+
+                    if (byManufacturer.isEmpty()) {
+                        System.out.println("Товары не найдены.");
+                    } else {
+                        byManufacturer.forEach(System.out::println);
+                      **  askToAddToBasket(scanner, userBasket, byManufacturer);**
+                    }
+                    break;
+                }. Это чистое применение DRY.
+
+
+**2. Метод getAllItemsAsList в Basket:**
+Возвращает список всех товаров в корзине с учетом количества каждого товара, то есть с "разворачиванием" дубликатов.
+    public List<Product> getAllItemsAsList() {
+        List<Product> allItems = new ArrayList<>();
+        for (Map.Entry<Product, Integer> entry : items.entrySet()) {
+            Product product = entry.getKey();
+            int quantity = entry.getValue();
+            for (int i = 0; i < quantity; i++) {
+                allItems.add(product);
+            }
+        }
+        return allItems;
+    }
+Есть несколько мест, где нужно получить все товары с учётом их количества — например:
+
+1. // Группируем товары в корзине по продукту и считаем количество каждого
+                        List<Product> allItemsInBasket = userBasket.getAllItemsAsList();
+    
+2.       case "1":
+                                    Order newOrder = new Order(userBasket.getAllItemsAsList());
+                                    orders.add(newOrder);
+                                    System.out.println("📦 Заказ оформлен! Номер заказа: " + newOrder.getOrderId());
+3.       case "3":
+                                    System.out.println("\uD83D\uDCDD Товары в корзине:");
+                                    List<Product> basketItems = userBasket.getAllItemsAsList();
+4.       case "5":
+                    if (userBasket.getProducts().isEmpty()) {
+                        System.out.println("Корзина пуста. Добавьте товары.");
+                    } else {
+                        Order order = new Order(userBasket.getAllItemsAsList());
+5.     // Добавляем товары из корзины в историю покупок
+                        for (Product p : userBasket.getAllItemsAsList()) {
+                            purchaseHistory.addPurchase(p);
+                        }
